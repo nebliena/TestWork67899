@@ -29,7 +29,7 @@ function create_custom_post_type() {
             'exclude_from_search' => false,
             'publicly_queryable' => true,
             'capability_type' => 'post',
-            'supports' => [ 'title', 'editor', 'excerpt', 'author', 'thumbnail', 'comments', 'revisions', 'custom-fields' ],
+            'supports' => [ 'title', 'author','revisions', 'custom-fields' ],
             'taxonomies' => [ 'countries' ],
         )
     );

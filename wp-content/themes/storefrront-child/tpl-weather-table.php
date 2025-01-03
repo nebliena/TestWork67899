@@ -9,4 +9,10 @@
  * @since 1.0
  */
 
- 
+ get_header();
+?>
+<div class="weather-table_container">
+    <?php do_shortcode('[weather_data_table]');?>
+</div>
+
+<?php get_footer(); ?>
