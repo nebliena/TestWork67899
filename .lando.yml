@@ -1,0 +1,4 @@
+name: abelo-test
+recipe: wordpress
+config:
+  webroot: .
