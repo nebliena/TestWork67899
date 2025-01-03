@@ -164,5 +164,12 @@ function register_weather_widget() {
 }
 add_action('widgets_init', 'register_weather_widget');
 
+function before_weather_data_table_callback() {
+    echo '<h2>Weather Data Overview</h2>';
+}
+add_action('before_weather_data_table', 'before_weather_data_table_callback');
 
-
+function after_weather_data_table_callback() {
+    echo '<p>End of weather data list.</p>';
+}
+add_action('after_weather_data_table', 'after_weather_data_table_callback');
