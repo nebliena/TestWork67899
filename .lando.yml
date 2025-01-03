@@ -1,4 +1,8 @@
 name: abelo-test
+services:
+  myservice:
+    type: php
+    composer_version: "1.10.1"
 recipe: wordpress
 config:
   webroot: .

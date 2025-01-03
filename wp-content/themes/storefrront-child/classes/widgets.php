@@ -3,7 +3,7 @@
  * Weather_Widget class.
  *
  * A custom widget for displaying weather information of a city based on latitude and longitude
- * using the OpenWeatherMap API. The widget allows selecting a city from a dropdown and shows the
+ * using the WeatherAPI API. The widget allows selecting a city from a dropdown and shows the
  * weather information for the selected city.
  */
 class Weather_Widget extends WP_Widget {
@@ -80,7 +80,7 @@ class Weather_Widget extends WP_Widget {
      * Outputs the widget content on the frontend.
      *
      * This method is called when the widget is displayed on the site frontend. It fetches the
-     * latitude and longitude of the selected city, retrieves the weather data from OpenWeatherMap,
+     * latitude and longitude of the selected city, retrieves the weather data from WeatherAPI,
      * and displays it.
      *
      * @param array $args The widget arguments, including before and after widget HTML.
@@ -96,7 +96,7 @@ class Weather_Widget extends WP_Widget {
             $longitude = get_post_meta($city_id, '_longitude', true);
 
             if ($latitude && $longitude) {
-                // Fetch the weather data from OpenWeatherMap
+                // Fetch the temperature data from WeatherAPI
                 $weather_data = $this->get_weather_data($latitude, $longitude);
 
                 //var_dump($weather_data);die();
@@ -106,9 +106,7 @@ class Weather_Widget extends WP_Widget {
                 <div class="weather-widget">
                     <h3>Weather for <?php echo esc_html(get_the_title($city_id)); ?></h3>
                     <?php if ($weather_data): ?>
-                        <p><strong>Temperature:</strong> <?php echo esc_html($weather_data['temp']); ?>°C</p>
-                        <p><strong>Weather:</strong> <?php echo esc_html($weather_data['description']); ?></p>
-                        <p><strong>Humidity:</strong> <?php echo esc_html($weather_data['humidity']); ?>%</p>
+                        <p><strong>Temperature:</strong> <?php echo esc_html($weather_data['temp'][0]); ?>°C/<?php echo esc_html($weather_data['temp'][1]); ?>°C</p>
                     <?php else: ?>
                         <p>Unable to fetch weather data at the moment.</p>
                     <?php endif; ?>
@@ -136,35 +134,30 @@ class Weather_Widget extends WP_Widget {
     }
 
     /**
-     * Fetches weather data from the OpenWeatherMap API.
+     * Fetches weather data from the WeatherAPI API.
      *
      * This function uses the latitude and longitude of a city to fetch weather data from the
-     * OpenWeatherMap API, including temperature, description, and humidity.
+     * WeatherAPI API, including temperature, description, and humidity.
      *
      * @param string $latitude  The latitude of the city.
      * @param string $longitude The longitude of the city.
-     * @return array|false Weather data array on success, false on failure.
+     * @return array|false Temp data array on success, false on failure.
      */
     private function get_weather_data($latitude, $longitude) {
-        $api_key = '2869cc01c302c7e2bc32238ce76740eb'; // Replace with your actual OpenWeatherMap API key
-        $url = "https://api.openweathermap.org/data/2.5/onecall?lat={$latitude}&lon={$longitude}&units=metric&appid={$api_key}";
-
-        // Fetch the weather data using the API
-        $response = wp_remote_get($url);
+        $api_key = 'e84cfa21c6fb4be6960141250250301';
+        $client = new WeatherAPILib\WeatherAPIClient($api_key);
+        $q = "{$latitude},{$longitude}";
+        $aPIs = $client->getAPIs();
+        $response = $aPIs->getRealtimeWeather($q);
 
         if (is_wp_error($response)) {
             return false;
         }
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if ($data && $data['cod'] == 200) {
-            // Return temperature, weather description, and humidity
+        if ($response) {
+            // Return temperature
             return array(
-                'temp' => $data['main']['temp'],
-                'description' => $data['weather'][0]['description'],
-                'humidity' => $data['main']['humidity']
+                'temp' => [$response->current->tempC,$response->current->tempF]
             );
         } else {
             return false;

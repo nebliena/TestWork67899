@@ -1,5 +1,7 @@
 <?php
+require_once "includes/weatherapi-PHP/vendor/autoload.php";
 require_once 'classes/widgets.php';
+require_once 'classes/weather.data.php';
 
 /**
  * Registers the 'cities' custom post type.
@@ -173,3 +175,93 @@ function after_weather_data_table_callback() {
     echo '<p>End of weather data list.</p>';
 }
 add_action('after_weather_data_table', 'after_weather_data_table_callback');
+
+/**
+ * Enqueues the JavaScript file for handling the AJAX search functionality.
+ *
+ * This function registers and localizes a JavaScript file that listens for input in the search field
+ * and sends AJAX requests to fetch filtered weather data.
+ *
+ * @return void
+ */
+function enqueue_weather_search_script() {
+    wp_enqueue_script(
+        'weather-search',
+        get_stylesheet_directory_uri() . '/assets/js/weather-search.js', // Replace with the correct path to your JS file
+        array('jquery'),
+        '1.0',
+        true
+    );
+
+    // Localize the script with necessary AJAX data
+    wp_localize_script('weather-search', 'weatherSearch', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce'    => wp_create_nonce('weather_search_nonce')
+    ));
+}
+
+// Hook into WordPress to enqueue the script
+add_action('wp_enqueue_scripts', 'enqueue_weather_search_script');
+
+
+/**
+ * AJAX handler for filtering weather data based on the city name.
+ *
+ * This function fetches weather data from the database based on the user's search input and returns the results
+ * in HTML format. If no matching data is found, it returns a message indicating no results.
+ *
+ * @return void Outputs the filtered weather data as HTML or an error message in JSON format.
+ */
+function filter_weather_data() {
+    global $wpdb;
+
+    // Get the search query from the AJAX request
+    $search_query = isset($_POST['search_query']) ? sanitize_text_field($_POST['search_query']) : '';
+
+    // Fetch matching weather data from the database
+    $results = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT wd.*, p.post_title 
+            FROM {$wpdb->prefix}weather_data wd 
+            JOIN {$wpdb->posts} p ON wd.city_id = p.ID 
+            WHERE p.post_title LIKE %s",
+            '%' . $wpdb->esc_like($search_query) . '%'
+        )
+    );
+
+    // Check if results were found
+    if ($results) {
+        ob_start();
+        ?>
+        <table class="weather-data-table">
+            <thead>
+                <tr>
+                    <th>City</th>
+                    <th>Temperature (°C/°F)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($results as $data) : ?>
+                    <?php $tempObject = json_decode($data->temperature); ?>
+                    <tr>
+                        <td><?php echo esc_html($data->post_title); ?></td>
+                        <td><?php echo esc_html($tempObject->temp[0]); ?>°C/<?php echo esc_html($tempObject->temp[1]); ?>°F</td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+        wp_send_json_success(ob_get_clean());
+    } else {
+        wp_send_json_success('<p>No matching weather data found.</p>');
+    }
+
+    wp_die();
+}
+
+// Register the AJAX actions
+add_action('wp_ajax_filter_weather_data', 'filter_weather_data');
+add_action('wp_ajax_nopriv_filter_weather_data', 'filter_weather_data');
+
+// Initialize the Weather_Data class
+$weather_data = new Weather_Data();
